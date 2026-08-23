@@ -303,6 +303,27 @@ Now, you can install the APK using the `adb` tool:
 After running, `eSpeakActivity` will extract the `espeakdata.zip` file into its
 own data directory to set up the available voices.
 
+### Managing dictionaries on Android
+
+Open the eSpeak engine settings and select **Dictionary manager**. The manager
+supports two workflows without requiring storage permissions:
+
+1. **Import a compiled dictionary** selects a `<language>_dict` document through
+   Android's system document picker. This works with scoped storage on Android
+   11 and later, and also allows files from document providers such as cloud
+   storage. The file name and compiled dictionary header are validated before
+   the installed dictionary is replaced.
+2. Select an installed dictionary to edit its `*_list` source in the built-in
+   text editor. **Save and compile dictionary** writes the source atomically,
+   invokes the eSpeak NG dictionary compiler, and activates the resulting
+   compiled dictionary. The application packages the matching rules and other
+   source components from `dictsource/` so compilation happens entirely on the
+   device.
+
+Dictionary list syntax is documented in [Text to Phoneme Translation](dictionary.md#pronunciation-dictionary-list).
+Imported dictionaries for which matching source rules are not bundled can still
+be installed, but cannot be edited and recompiled in the manager.
+
 To enable eSpeak, you need to:
 
 1.  go into the Android `Text-to-Speech settings` UI;

@@ -65,6 +65,9 @@ android {
             manifest.srcFile('AndroidManifest.xml')
             java.srcDirs = ['src']
             res.srcDirs = ['res']
+            // Package dictionary source files so a user can edit and compile
+            // a language dictionary entirely on the Android device.
+            assets.srcDirs = ['../dictsource']
         }
         androidTest {
             java.srcDirs = ['eSpeakTests/src']

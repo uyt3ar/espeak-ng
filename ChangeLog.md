@@ -34,6 +34,7 @@ updated languages:
 *  tlh (Klingon) -- fionnlagh
 
 bug fixes:
+*  fixed Android dictionary import on Android 11 and later by using the system document picker -- uyt3ar
 *  numerous buffer-overflow, out-of-bounds and memory-safety hardening fixes across number, clause, dictionary, letter-lookup, Roman-numeral, klatt and mbrola code (fuzzing-driven) -- Samuel Thibault, Rudi Heitbaum, Jiami Lin, Erik Chan
 *  fixed infinite loop in rule matching with UTF-8 input -- Samuel Thibault
 *  fixed loss of final input byte from stdin -- Samuel Thibault
@@ -63,6 +64,7 @@ bug fixes:
 *  fixed hyphenated emoji descriptions losing everything from the hyphen on, which left flags such as 🇧🇫 silent in 84 languages -- Alexander Epaneshnikov
 
 features:
+*  added an Android dictionary manager for editing and compiling dictionary sources directly on the device -- uyt3ar
 *  matched ZWJ emoji sequences against multi-codepoint dictionary entries -- Alexander Epaneshnikov
 *  added skin tone emoji support: sequences are spoken as the base name plus the modifier names -- Alexander Epaneshnikov
 *  updated emoji and symbol data from CLDR 33.1 to CLDR 48.2 (Unicode Emoji 12..16) for 66 languages, with a new additive tools/update-emoji updater -- Alexander Epaneshnikov

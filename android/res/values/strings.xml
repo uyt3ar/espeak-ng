@@ -60,4 +60,29 @@
   <string name="variant_whisper">Whisper</string>
   <string name="import_voice_title">Import eSpeak dictionary</string>
   <string name="import_voice_description">Import an eSpeak voice dictionary file from the SD card.</string>
+
+  <string name="dictionary_manager_title">Dictionary manager</string>
+  <string name="dictionary_manager_description">Import, edit and compile eSpeak dictionaries on this device.</string>
+  <string name="dictionary_select_label">Dictionary</string>
+  <string name="dictionary_import_button">Import compiled dictionary</string>
+  <string name="dictionary_editor_help">Select a dictionary. Entries use the eSpeak *_list source format.</string>
+  <string name="dictionary_editor_hint">word  phonemes</string>
+  <string name="dictionary_save_compile_button">Save and compile dictionary</string>
+  <string name="dictionary_none_found">No installed dictionaries were found.</string>
+  <string name="dictionary_invalid_name">Choose a file named &lt;language&gt;_dict.</string>
+  <string name="dictionary_importing">Importing dictionary…</string>
+  <string name="dictionary_import_success">Imported %1$s successfully.</string>
+  <string name="dictionary_import_failed">Dictionary import failed: %1$s</string>
+  <string name="dictionary_create_directory_failed">Unable to create the dictionary directory.</string>
+  <string name="dictionary_open_failed">Unable to open the selected document.</string>
+  <string name="dictionary_too_large">The selected dictionary is larger than 64 MB.</string>
+  <string name="dictionary_invalid_file">The selected document is not a valid compiled eSpeak dictionary.</string>
+  <string name="dictionary_replace_failed">Unable to replace the installed dictionary.</string>
+  <string name="dictionary_loading_source">Loading editable dictionary source…</string>
+  <string name="dictionary_source_unavailable">Editable source rules are not available for this dictionary.</string>
+  <string name="dictionary_editor_ready">Editing %1$s_list. Save to compile and activate it.</string>
+  <string name="dictionary_compiling">Saving and compiling dictionary…</string>
+  <string name="dictionary_compile_status">The eSpeak compiler returned status %1$d.</string>
+  <string name="dictionary_compile_success">Saved and activated the %1$s dictionary.</string>
+  <string name="dictionary_compile_failed">Dictionary compilation failed: %1$s</string>
 </resources>

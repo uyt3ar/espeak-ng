@@ -31,6 +31,7 @@
 #include <jni.h>
 
 #include <espeak-ng/speak_lib.h>
+#include <espeak-ng/espeak_ng.h>
 #include <Log.h>
 
 #define BUFFER_SIZE_IN_MILLISECONDS 300
@@ -215,6 +216,34 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeGetVersion(
     JNIEnv *env, jclass clazz) {
   if (DEBUG) LOGV("%s", __FUNCTION__);
   return (*env)->NewStringUTF(env, espeak_Info(NULL));
+}
+
+JNIEXPORT jint
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeCompileDictionary(
+    JNIEnv *env, jclass clazz, jstring source_path, jstring dictionary_name) {
+  if (source_path == NULL || dictionary_name == NULL)
+    return ENS_COMPILE_ERROR;
+
+  const char *source = (*env)->GetStringUTFChars(env, source_path, NULL);
+  const char *name = (*env)->GetStringUTFChars(env, dictionary_name, NULL);
+  if (source == NULL || name == NULL) {
+    if (source != NULL)
+      (*env)->ReleaseStringUTFChars(env, source_path, source);
+    if (name != NULL)
+      (*env)->ReleaseStringUTFChars(env, dictionary_name, name);
+    return ENS_COMPILE_ERROR;
+  }
+
+  espeak_ng_STATUS status = ENS_VOICE_NOT_FOUND;
+  if (espeak_SetVoiceByName(name) == EE_OK) {
+    espeak_ng_ERROR_CONTEXT context = NULL;
+    status = espeak_ng_CompileDictionary(source, name, NULL, 0, &context);
+    espeak_ng_ClearErrorContext(&context);
+  }
+
+  (*env)->ReleaseStringUTFChars(env, source_path, source);
+  (*env)->ReleaseStringUTFChars(env, dictionary_name, name);
+  return status;
 }
 
 JNIEXPORT jobjectArray
