@@ -16,28 +16,17 @@
         Description: Sample text spoken aloud when the user is trying out a language.-->
   <string name="sample_text">هذه عينة من النص الذي تم نطقه في %s</string>
 
-  <string name="dictionary_manager_title">إدارة القواميس</string>
-  <string name="dictionary_manager_description">استيراد قواميس eSpeak وتحريرها وتجميعها على هذا الجهاز.</string>
-  <string name="dictionary_select_label">القاموس</string>
-  <string name="dictionary_import_button">استيراد قاموس مُجمّع</string>
-  <string name="dictionary_editor_help">اختر قاموسًا. تستخدم الإدخالات تنسيق مصدر ‎*_list الخاص بـ eSpeak.</string>
-  <string name="dictionary_editor_hint">الكلمة  الفونيمات</string>
-  <string name="dictionary_save_compile_button">حفظ القاموس وتجميعه</string>
-  <string name="dictionary_none_found">لم يتم العثور على قواميس مثبتة.</string>
-  <string name="dictionary_invalid_name">اختر ملفًا اسمه ‎&lt;language&gt;_dict.</string>
-  <string name="dictionary_importing">جارٍ استيراد القاموس…</string>
-  <string name="dictionary_import_success">تم استيراد %1$s بنجاح.</string>
-  <string name="dictionary_import_failed">فشل استيراد القاموس: %1$s</string>
-  <string name="dictionary_create_directory_failed">تعذر إنشاء مجلد القاموس.</string>
-  <string name="dictionary_open_failed">تعذر فتح المستند المحدد.</string>
-  <string name="dictionary_too_large">حجم القاموس المحدد أكبر من 64 ميغابايت.</string>
-  <string name="dictionary_invalid_file">المستند المحدد ليس قاموس eSpeak مُجمّعًا صالحًا.</string>
-  <string name="dictionary_replace_failed">تعذر استبدال القاموس المثبت.</string>
-  <string name="dictionary_loading_source">جارٍ تحميل مصدر القاموس القابل للتحرير…</string>
-  <string name="dictionary_source_unavailable">قواعد المصدر القابلة للتحرير غير متاحة لهذا القاموس.</string>
-  <string name="dictionary_editor_ready">يتم الآن تحرير %1$s_list. احفظه لتجميعه وتفعيله.</string>
-  <string name="dictionary_compiling">جارٍ حفظ القاموس وتجميعه…</string>
-  <string name="dictionary_compile_status">أعاد مُجمّع eSpeak حالة الخطأ %1$d.</string>
-  <string name="dictionary_compile_success">تم حفظ قاموس %1$s وتفعيله.</string>
-  <string name="dictionary_compile_failed">فشل تجميع القاموس: %1$s</string>
+  <string name="dictionary_manager_title">استبدالات الكلمات المخصصة</string>
+  <string name="dictionary_manager_description">تصحيح الكلمات باستبدالات نصية سريعة ومخصصة لكل لغة.</string>
+  <string name="lexicon_target_label">الكلمة الخاطئة أو المستهدفة</string>
+  <string name="lexicon_target_hint">الكلمة المطلوب استبدالها</string>
+  <string name="lexicon_replacement_label">البديل أو النطق الصحيح</string>
+  <string name="lexicon_replacement_hint">النص البديل</string>
+  <string name="lexicon_language_label">اللغة</string>
+  <string name="lexicon_save_button">حفظ الاستبدال</string>
+  <string name="lexicon_help">تُطبق الاستبدالات قبل النطق دون تجميع القاموس.</string>
+  <string name="lexicon_no_languages">لا توجد لغات متاحة.</string>
+  <string name="lexicon_saved">تم حفظ الاستبدال. إجمالي الإدخالات: %1$d.</string>
+  <string name="lexicon_save_failed">تعذر حفظ الاستبدال: %1$s</string>
+  <string name="lexicon_entry_count">الاستبدالات المحفوظة: %1$d.</string>
 </resources>

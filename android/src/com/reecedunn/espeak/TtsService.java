@@ -70,6 +70,8 @@ public class TtsService extends TextToSpeechService {
     private int mSynthTextOffset;
     /** Number of code points in {@link #mSynthText}. */
     private int mSynthTextCodePoints;
+    /** Maps word events in transformed text back to offsets in the caller's text. */
+    private CustomLexicon.ReplacementResult mLexiconReplacement;
     /** Anchor for incremental code point to UTF-16 index conversion. */
     private int mAnchorCodePoint;
     private int mAnchorOffset;
@@ -372,6 +374,9 @@ public class TtsService extends TextToSpeechService {
      * order; the occasional out-of-order event falls back to a full rescan.
      */
     private int codePointToOffset(int codePointIndex) {
+        if (mLexiconReplacement != null) {
+            return mLexiconReplacement.originalOffsetForCodePoint(codePointIndex);
+        }
         if (codePointIndex <= 0) {
             return 0;
         }
@@ -442,6 +447,9 @@ public class TtsService extends TextToSpeechService {
                 text = text.substring(declarationEnd).trim();
             }
         }
+
+        mLexiconReplacement = CustomLexicon.apply(storageContext, voice.name, text);
+        text = mLexiconReplacement.text;
 
         mSynthText = text;
         mSynthTextOffset = textOffset;

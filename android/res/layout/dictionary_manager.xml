@@ -8,44 +8,59 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:labelFor="@id/dictionary_selector"
-        android:text="@string/dictionary_select_label" />
+        android:labelFor="@id/lexicon_target"
+        android:text="@string/lexicon_target_label" />
+
+    <EditText
+        android:id="@+id/lexicon_target"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/lexicon_target_hint"
+        android:inputType="text|textNoSuggestions"
+        android:maxLength="128"
+        android:singleLine="true" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:labelFor="@id/lexicon_replacement"
+        android:text="@string/lexicon_replacement_label" />
+
+    <EditText
+        android:id="@+id/lexicon_replacement"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/lexicon_replacement_hint"
+        android:inputType="text|textNoSuggestions"
+        android:maxLength="512"
+        android:singleLine="true" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:labelFor="@id/lexicon_language"
+        android:text="@string/lexicon_language_label" />
 
     <Spinner
-        android:id="@+id/dictionary_selector"
+        android:id="@+id/lexicon_language"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <Button
-        android:id="@+id/import_dictionary"
+        android:id="@+id/lexicon_save"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/dictionary_import_button" />
+        android:layout_marginTop="16dp"
+        android:text="@string/lexicon_save_button" />
 
     <TextView
-        android:id="@+id/dictionary_status"
+        android:id="@+id/lexicon_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:accessibilityLiveRegion="polite"
-        android:text="@string/dictionary_editor_help" />
-
-    <EditText
-        android:id="@+id/dictionary_source"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:gravity="start|top"
-        android:hint="@string/dictionary_editor_hint"
-        android:inputType="textMultiLine|textNoSuggestions"
-        android:scrollbars="vertical"
-        android:typeface="monospace" />
-
-    <Button
-        android:id="@+id/save_dictionary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/dictionary_save_compile_button" />
+        android:text="@string/lexicon_help" />
 
 </LinearLayout>

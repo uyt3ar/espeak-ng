@@ -303,26 +303,20 @@ Now, you can install the APK using the `adb` tool:
 After running, `eSpeakActivity` will extract the `espeakdata.zip` file into its
 own data directory to set up the available voices.
 
-### Managing dictionaries on Android
+### Custom word replacements on Android
 
-Open the eSpeak engine settings and select **Dictionary manager**. The manager
-supports two workflows without requiring storage permissions:
+Open the eSpeak engine settings and select **Custom word replacements**. Enter
+the incorrect or target word, the replacement text that should be spoken, and
+the language to which the mapping belongs. The mapping is saved in a small JSON
+file in the application's private storage and is applied once, immediately
+before text is passed to the synthesis engine.
 
-1. **Import a compiled dictionary** selects a `<language>_dict` document through
-   Android's system document picker. This works with scoped storage on Android
-   11 and later, and also allows files from document providers such as cloud
-   storage. The file name and compiled dictionary header are validated before
-   the installed dictionary is replaced.
-2. Select an installed dictionary to edit its `*_list` source in the built-in
-   text editor. **Save and compile dictionary** writes the source atomically,
-   invokes the eSpeak NG dictionary compiler, and activates the resulting
-   compiled dictionary. The application packages the matching rules and other
-   source components from `dictsource/` so compilation happens entirely on the
-   device.
-
-Dictionary list syntax is documented in [Text to Phoneme Translation](dictionary.md#pronunciation-dictionary-list).
-Imported dictionaries for which matching source rules are not bundled can still
-be installed, but cannot be edited and recompiled in the manager.
+The replacement is an exact, case-sensitive whole-word or whole-phrase match;
+it does not replace text embedded inside a longer word. Language variants fall
+back to their base language mapping when no exact variant mapping exists.
+Explicit SSML is left unchanged so element and attribute names cannot be
+corrupted. No external-storage permission, dictionary sources, native compiler,
+or engine-state change is involved.
 
 To enable eSpeak, you need to:
 

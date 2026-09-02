@@ -428,9 +428,8 @@ public class TtsSettingsActivity extends PreferenceActivity {
                                        boolean isWatch) {
         VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), engine);
 
-        // The supported-languages multi-select and the file-picker-driven
-        // voice import don't fit on a watch screen and have no meaningful
-        // input affordance there, so omit them on Wear.
+        // The supported-languages multi-select and word-replacement editor do
+        // not fit on a watch screen, so omit them on Wear.
         if (!isWatch) {
             group.addPreference(createSupportedLanguagesPreference(context, voices));
             group.addPreference(createDictionaryManagerPreference(context));

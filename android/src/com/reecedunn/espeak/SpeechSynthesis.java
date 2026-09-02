@@ -90,21 +90,6 @@ public class SpeechSynthesis {
         return mVoiceCount;
     }
 
-    /**
-     * Compile editable dictionary sources into the active eSpeak data folder.
-     * The native compiler uses global engine state, so serialize compilation
-     * with other calls made through this entry point.
-     */
-    public static synchronized int compileDictionary(Context context,
-                                                     File sourceDirectory,
-                                                     String dictionaryName) {
-        // Initialize eSpeak with this application's private data path before
-        // compiling; the native compiler writes <name>_dict to that path.
-        new SpeechSynthesis(context, null);
-        String sourcePath = sourceDirectory.getAbsolutePath() + File.separator;
-        return nativeCompileDictionary(sourcePath, dictionaryName);
-    }
-
     public int getSampleRate() {
         return mSampleRate;
     }
@@ -331,9 +316,6 @@ public class SpeechSynthesis {
     }
 
     private static native final boolean nativeClassInit();
-
-    private static native final int nativeCompileDictionary(String sourcePath,
-                                                            String dictionaryName);
 
     private native final int nativeCreate(String path);
 

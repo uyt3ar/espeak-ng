@@ -11,58 +11,49 @@
 package com.reecedunn.espeak;
 
 import android.app.Activity;
-import android.content.ContentResolver;
-import android.content.Intent;
-import android.database.Cursor;
-import android.net.Uri;
+import android.content.Context;
 import android.os.Bundle;
-import android.provider.OpenableColumns;
-import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Set;
+import java.util.Stack;
 
-/**
- * Imports compiled dictionaries with the Storage Access Framework and lets a
- * user edit and compile the corresponding dictionary list on the device.
- *
- * ACTION_OPEN_DOCUMENT is deliberately used instead of direct external-storage
- * paths. Direct access stopped working with scoped storage on Android 11, while
- * a content URI grants access to a user-selected file on local or cloud storage
- * without broad storage permissions.
- */
+/** Adds lightweight, language-scoped text replacements without compiling dictionaries. */
 public class DictionaryManagerActivity extends Activity {
-    private static final int REQUEST_IMPORT_DICTIONARY = 1;
-    private static final long MAX_DICTIONARY_BYTES = 64L * 1024L * 1024L;
-    private static final int N_HASH_DICT = 1024;
-    private static final Pattern DICTIONARY_FILE =
-            Pattern.compile("[A-Za-z0-9_-]+_dict");
-    private static final String[] SOURCE_SUFFIXES = {
-            "rules", "roots", "listx", "emoji", "extra"
-    };
+    private static final class LanguageOption {
+        final String code;
+        final String label;
 
-    private Spinner mDictionarySelector;
-    private EditText mDictionarySource;
+        LanguageOption(String code, String name) {
+            this.code = code;
+            this.label = code + " — " + name;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    private EditText mTarget;
+    private EditText mReplacement;
+    private Spinner mLanguage;
     private TextView mStatus;
-    private Button mSaveButton;
-    private ArrayAdapter<String> mDictionaryAdapter;
+    private Context mStorageContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,344 +61,108 @@ public class DictionaryManagerActivity extends Activity {
         setTitle(R.string.dictionary_manager_title);
         setContentView(R.layout.dictionary_manager);
 
-        mDictionarySelector = findViewById(R.id.dictionary_selector);
-        mDictionarySource = findViewById(R.id.dictionary_source);
-        mStatus = findViewById(R.id.dictionary_status);
-        mSaveButton = findViewById(R.id.save_dictionary);
+        mStorageContext = EspeakApp.getStorageContext();
+        mTarget = findViewById(R.id.lexicon_target);
+        mReplacement = findViewById(R.id.lexicon_replacement);
+        mLanguage = findViewById(R.id.lexicon_language);
+        mStatus = findViewById(R.id.lexicon_status);
 
-        mDictionaryAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, new ArrayList<String>());
-        mDictionaryAdapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
-        mDictionarySelector.setAdapter(mDictionaryAdapter);
-        mDictionarySelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view,
-                                       int position, long id) {
-                loadSelectedDictionarySource();
-            }
+        List<LanguageOption> languages = loadLanguages();
+        ArrayAdapter<LanguageOption> adapter = new ArrayAdapter<LanguageOption>(
+                this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mLanguage.setAdapter(adapter);
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                setEditorAvailable(false, getString(R.string.dictionary_none_found));
-            }
-        });
-
-        findViewById(R.id.import_dictionary).setOnClickListener(v -> openDictionaryPicker());
-        mSaveButton.setOnClickListener(v -> saveAndCompile());
-        refreshDictionaryList(null);
+        findViewById(R.id.lexicon_save).setOnClickListener(view -> saveMapping());
+        updateCount();
     }
 
-    private void openDictionaryPicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/octet-stream");
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
-                "application/octet-stream", "application/x-binary", "*/*"
-        });
-        startActivityForResult(intent, REQUEST_IMPORT_DICTIONARY);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_IMPORT_DICTIONARY || resultCode != RESULT_OK
-                || data == null || data.getData() == null) {
+    private void saveMapping() {
+        Object selected = mLanguage.getSelectedItem();
+        if (!(selected instanceof LanguageOption)) {
+            showStatus(getString(R.string.lexicon_no_languages));
             return;
         }
-
-        final Uri uri = data.getData();
-        final String displayName = getDisplayName(uri);
-        if (displayName == null || !DICTIONARY_FILE.matcher(displayName).matches()) {
-            showMessage(R.string.dictionary_invalid_name);
-            return;
-        }
-
-        setBusy(true, getString(R.string.dictionary_importing));
-        new Thread(() -> {
-            String error = null;
-            try {
-                importDictionary(uri, displayName);
-            } catch (IOException e) {
-                error = e.getMessage();
-            }
-            final String importError = error;
-            runOnUiThread(() -> {
-                setBusy(false, importError == null
-                        ? getString(R.string.dictionary_import_success, displayName)
-                        : getString(R.string.dictionary_import_failed, importError));
-                if (importError == null) {
-                    refreshDictionaryList(displayName.substring(
-                            0, displayName.length() - "_dict".length()));
-                    sendLanguagesUpdatedBroadcast();
-                }
-            });
-        }, "dictionary-import").start();
-    }
-
-    private void importDictionary(Uri uri, String displayName) throws IOException {
-        ContentResolver resolver = getContentResolver();
-        File dataPath = CheckVoiceData.getDataPath(EspeakApp.getStorageContext());
-        if (!dataPath.exists() && !dataPath.mkdirs()) {
-            throw new IOException(getString(R.string.dictionary_create_directory_failed));
-        }
-
-        File destination = new File(dataPath, displayName);
-        File temporary = new File(dataPath, displayName + ".importing");
-        long total = 0;
-        byte[] header = new byte[4];
-        int headerLength = 0;
-
-        try (InputStream input = resolver.openInputStream(uri);
-             FileOutputStream output = new FileOutputStream(temporary)) {
-            if (input == null) {
-                throw new IOException(getString(R.string.dictionary_open_failed));
-            }
-            byte[] buffer = new byte[16 * 1024];
-            int count;
-            while ((count = input.read(buffer)) != -1) {
-                if (headerLength < header.length) {
-                    int copy = Math.min(count, header.length - headerLength);
-                    System.arraycopy(buffer, 0, header, headerLength, copy);
-                    headerLength += copy;
-                }
-                total += count;
-                if (total > MAX_DICTIONARY_BYTES) {
-                    throw new IOException(getString(R.string.dictionary_too_large));
-                }
-                output.write(buffer, 0, count);
-            }
-            output.getFD().sync();
+        LanguageOption language = (LanguageOption) selected;
+        try {
+            CustomLexicon.saveMapping(mStorageContext, language.code,
+                    mTarget.getText().toString(), mReplacement.getText().toString());
+            mTarget.setText("");
+            mReplacement.setText("");
+            int count = CustomLexicon.entryCount(mStorageContext);
+            showStatus(getString(R.string.lexicon_saved, count));
+            mTarget.requestFocus();
         } catch (IOException e) {
-            temporary.delete();
-            throw e;
-        }
-
-        int hashCount = (header[0] & 0xff)
-                | ((header[1] & 0xff) << 8)
-                | ((header[2] & 0xff) << 16)
-                | ((header[3] & 0xff) << 24);
-        if (headerLength != 4 || total <= 8 || hashCount != N_HASH_DICT) {
-            temporary.delete();
-            throw new IOException(getString(R.string.dictionary_invalid_file));
-        }
-
-        File backup = new File(dataPath, displayName + ".bak");
-        backup.delete();
-        if (destination.exists() && !destination.renameTo(backup)) {
-            temporary.delete();
-            throw new IOException(getString(R.string.dictionary_replace_failed));
-        }
-        if (!temporary.renameTo(destination)) {
-            if (backup.exists()) backup.renameTo(destination);
-            temporary.delete();
-            throw new IOException(getString(R.string.dictionary_replace_failed));
-        }
-        backup.delete();
-    }
-
-    private void refreshDictionaryList(String selectName) {
-        File dataPath = CheckVoiceData.getDataPath(EspeakApp.getStorageContext());
-        File[] files = dataPath.listFiles(file -> file.isFile()
-                && DICTIONARY_FILE.matcher(file.getName()).matches());
-        List<String> dictionaries = new ArrayList<String>();
-        if (files != null) {
-            for (File file : files) {
-                String filename = file.getName();
-                dictionaries.add(filename.substring(0,
-                        filename.length() - "_dict".length()));
-            }
-        }
-        Collections.sort(dictionaries);
-        mDictionaryAdapter.clear();
-        mDictionaryAdapter.addAll(dictionaries);
-        mDictionaryAdapter.notifyDataSetChanged();
-
-        if (dictionaries.isEmpty()) {
-            setEditorAvailable(false, getString(R.string.dictionary_none_found));
-            return;
-        }
-        if (selectName != null) {
-            int position = dictionaries.indexOf(selectName);
-            if (position >= 0) mDictionarySelector.setSelection(position);
+            showStatus(getString(R.string.lexicon_save_failed, e.getMessage()));
         }
     }
 
-    private void loadSelectedDictionarySource() {
-        final String name = getSelectedDictionary();
-        if (name == null) return;
-        setBusy(true, getString(R.string.dictionary_loading_source));
-        new Thread(() -> {
-            String contents = null;
-            String error = null;
-            try {
-                if (!assetExists(name + "_rules")) {
-                    throw new IOException(getString(R.string.dictionary_source_unavailable));
-                }
-                File list = getEditableListFile(name);
-                if (!list.exists()) {
-                    copyAssetIfPresent(name + "_list", list);
-                    if (!list.exists()) FileUtils.write(list, "");
-                }
-                contents = readUtf8(list);
-            } catch (IOException e) {
-                error = e.getMessage();
-            }
-            final String source = contents;
-            final String loadError = error;
-            runOnUiThread(() -> {
-                setBusy(false, loadError == null
-                        ? getString(R.string.dictionary_editor_ready, name)
-                        : loadError);
-                mDictionarySource.setText(source == null ? "" : source);
-                mDictionarySource.setEnabled(loadError == null);
-                mSaveButton.setEnabled(loadError == null);
-            });
-        }, "dictionary-source-load").start();
-    }
-
-    private void saveAndCompile() {
-        final String name = getSelectedDictionary();
-        if (name == null) return;
-        final String source = mDictionarySource.getText().toString();
-        setBusy(true, getString(R.string.dictionary_compiling));
-
-        new Thread(() -> {
-            String error = null;
-            try {
-                File sourceDir = getSourceDirectory();
-                if (!sourceDir.exists() && !sourceDir.mkdirs()) {
-                    throw new IOException(getString(R.string.dictionary_create_directory_failed));
-                }
-                copyAssetRequired(name + "_rules", new File(sourceDir, name + "_rules"));
-                for (String suffix : SOURCE_SUFFIXES) {
-                    if (!"rules".equals(suffix)) {
-                        copyAssetIfPresent(name + "_" + suffix,
-                                new File(sourceDir, name + "_" + suffix));
-                    }
-                }
-                writeUtf8Atomically(getEditableListFile(name), source);
-                int status = SpeechSynthesis.compileDictionary(
-                        EspeakApp.getStorageContext(), sourceDir, name);
-                if (status != 0) {
-                    throw new IOException(getString(
-                            R.string.dictionary_compile_status, status));
-                }
-            } catch (IOException e) {
-                error = e.getMessage();
-            }
-            final String compileError = error;
-            runOnUiThread(() -> {
-                setBusy(false, compileError == null
-                        ? getString(R.string.dictionary_compile_success, name)
-                        : getString(R.string.dictionary_compile_failed, compileError));
-                if (compileError == null) sendLanguagesUpdatedBroadcast();
-            });
-        }, "dictionary-compile").start();
-    }
-
-    private File getSourceDirectory() {
-        return new File(getFilesDir(), "dictionary-sources");
-    }
-
-    private File getEditableListFile(String name) {
-        return new File(getSourceDirectory(), name + "_list");
-    }
-
-    private boolean assetExists(String name) {
-        try (InputStream ignored = getAssets().open(name)) {
-            return true;
+    private void updateCount() {
+        try {
+            int count = CustomLexicon.entryCount(mStorageContext);
+            mStatus.setText(getString(R.string.lexicon_entry_count, count));
         } catch (IOException e) {
-            return false;
+            mStatus.setText(R.string.lexicon_help);
         }
     }
 
-    private void copyAssetRequired(String assetName, File destination) throws IOException {
-        if (!copyAssetIfPresent(assetName, destination)) {
-            throw new IOException(getString(R.string.dictionary_source_unavailable));
-        }
-    }
-
-    private boolean copyAssetIfPresent(String assetName, File destination) throws IOException {
-        try (InputStream input = getAssets().open(assetName)) {
-            if (destination.getParentFile() != null) destination.getParentFile().mkdirs();
-            try (FileOutputStream output = new FileOutputStream(destination)) {
-                byte[] buffer = new byte[16 * 1024];
-                int count;
-                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-            }
-            return true;
-        } catch (java.io.FileNotFoundException e) {
-            return false;
-        }
-    }
-
-    private static String readUtf8(File file) throws IOException {
-        try (FileInputStream input = new FileInputStream(file);
-             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[16 * 1024];
-            int count;
-            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-            return new String(output.toByteArray(), StandardCharsets.UTF_8);
-        }
-    }
-
-    private static void writeUtf8Atomically(File destination, String contents)
-            throws IOException {
-        File temporary = new File(destination.getParentFile(),
-                destination.getName() + ".saving");
-        try (FileOutputStream output = new FileOutputStream(temporary)) {
-            output.write(contents.getBytes(StandardCharsets.UTF_8));
-            output.getFD().sync();
-        }
-        if (destination.exists() && !destination.delete()) {
-            temporary.delete();
-            throw new IOException("Unable to replace dictionary source");
-        }
-        if (!temporary.renameTo(destination)) {
-            temporary.delete();
-            throw new IOException("Unable to save dictionary source");
-        }
-    }
-
-    private String getDisplayName(Uri uri) {
-        try (Cursor cursor = getContentResolver().query(uri,
-                new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                if (column >= 0) return cursor.getString(column);
-            }
-        } catch (RuntimeException ignored) {
-        }
-        return uri.getLastPathSegment();
-    }
-
-    private String getSelectedDictionary() {
-        Object selected = mDictionarySelector.getSelectedItem();
-        return selected == null ? null : selected.toString();
-    }
-
-    private void setBusy(boolean busy, String status) {
-        mStatus.setText(status);
-        mDictionarySelector.setEnabled(!busy);
-        findViewById(R.id.import_dictionary).setEnabled(!busy);
-        mDictionarySource.setEnabled(!busy);
-        mSaveButton.setEnabled(!busy);
-    }
-
-    private void setEditorAvailable(boolean available, String status) {
-        mStatus.setText(status);
-        mDictionarySource.setEnabled(available);
-        mSaveButton.setEnabled(available);
-    }
-
-    private void showMessage(int stringResource) {
-        String message = getString(stringResource);
+    private void showStatus(String message) {
         mStatus.setText(message);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
-    private void sendLanguagesUpdatedBroadcast() {
-        sendBroadcast(new Intent(DownloadVoiceData.BROADCAST_LANGUAGES_UPDATED));
+    private List<LanguageOption> loadLanguages() {
+        List<LanguageOption> result = new ArrayList<LanguageOption>();
+        Set<String> seen = new HashSet<String>();
+        File root = new File(CheckVoiceData.getDataPath(mStorageContext), "lang");
+        Stack<File> pending = new Stack<File>();
+        if (root.isDirectory()) pending.push(root);
+        while (!pending.empty()) {
+            File[] files = pending.pop().listFiles();
+            if (files == null) continue;
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    pending.push(file);
+                } else {
+                    LanguageOption option = parseLanguage(file);
+                    if (option != null && seen.add(option.code)) result.add(option);
+                }
+            }
+        }
+        if (result.isEmpty()) {
+            result.add(new LanguageOption("ar", "Arabic"));
+            result.add(new LanguageOption("en", "English"));
+        }
+        Collections.sort(result, new Comparator<LanguageOption>() {
+            @Override
+            public int compare(LanguageOption left, LanguageOption right) {
+                return left.label.compareToIgnoreCase(right.label);
+            }
+        });
+        return result;
+    }
+
+    private static LanguageOption parseLanguage(File file) {
+        String code = null;
+        String name = null;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                new FileInputStream(file), "UTF-8"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.startsWith("language ")) {
+                    String value = line.substring("language ".length()).trim();
+                    int separator = value.indexOf(' ');
+                    code = separator < 0 ? value : value.substring(0, separator);
+                } else if (line.startsWith("name ")) {
+                    name = line.substring("name ".length()).trim();
+                }
+                if (code != null && name != null) break;
+            }
+        } catch (IOException ignored) {
+            return null;
+        }
+        if (code == null || code.isEmpty()) return null;
+        return new LanguageOption(code, name == null || name.isEmpty() ? file.getName() : name);
     }
 }
