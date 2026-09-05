@@ -49,6 +49,8 @@ public class SpeechSynthesis {
     public static final int AGE_YOUNG = 12;
     public static final int AGE_OLD = 60;
 
+    /** Native output rate of espeak-ng; the real value is reported by nativeCreate(). */
+    public static final int DEFAULT_SAMPLE_RATE = 22050;
     public static final int CHANNEL_COUNT_MONO = 1;
     public static final int FORMAT_PCM_S16 = 2;
 

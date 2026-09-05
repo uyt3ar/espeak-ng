@@ -38,6 +38,7 @@ import android.preference.PreferenceManager;
 
 import com.reecedunn.espeak.BuildConfig;
 import com.reecedunn.espeak.preference.ImportVoicePreference;
+import com.reecedunn.espeak.preference.EqualizerPreference;
 import com.reecedunn.espeak.preference.SeekBarPreference;
 import com.reecedunn.espeak.preference.SpeakPunctuationPreference;
 import com.reecedunn.espeak.preference.SupportedLanguagesPreference;
@@ -143,6 +144,24 @@ public class TtsSettingsActivity extends PreferenceActivity {
         pref.setDialogTitle(title);
         pref.setOnPreferenceChangeListener(mOnPreferenceChanged);
         pref.setDescription(R.string.import_voice_description);
+        return pref;
+    }
+
+    private static Preference createEqualizerPreference(Context context, SpeechSynthesis engine) {
+        final EqualizerPreference pref = new EqualizerPreference(context);
+        pref.setSampleRate(engine.getSampleRate());
+        pref.setTitle(R.string.equalizer_title);
+        pref.setDialogTitle(R.string.equalizer_title);
+        pref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                if (newValue instanceof String) {
+                    preference.setSummary(EqualizerPreference.getPresetDisplayName(
+                            preference.getContext(), (String) newValue));
+                }
+                return true;
+            }
+        });
         return pref;
     }
 
@@ -438,6 +457,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         group.addPreference(createSeekBarPreference(context, engine.Pitch, VoiceSettings.PREF_PITCH, R.string.setting_default_pitch));
         group.addPreference(createSeekBarPreference(context, engine.PitchRange, VoiceSettings.PREF_PITCH_RANGE, R.string.espeak_pitch_range));
         group.addPreference(createSeekBarPreference(context, engine.Volume, VoiceSettings.PREF_VOLUME, R.string.espeak_volume));
+        group.addPreference(createEqualizerPreference(context, engine));
     }
 
     private static final OnPreferenceChangeListener mOnPreferenceChanged =

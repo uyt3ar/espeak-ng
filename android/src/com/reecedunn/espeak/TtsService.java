@@ -63,6 +63,8 @@ public class TtsService extends TextToSpeechService {
 
     private SpeechSynthesis mEngine;
     private SynthesisCallback mCallback;
+    /** Tone shaping applied to eSpeak's PCM before it reaches the framework. */
+    private AudioEqualizer mEqualizer;
 
     /** Text handed to eSpeak for the current request. */
     private String mSynthText;
@@ -122,6 +124,9 @@ public class TtsService extends TextToSpeechService {
         }
 
         mEngine = new SpeechSynthesis(storageContext, mSynthCallback);
+        // The sample rate is whatever espeak-ng reports (22050 Hz); the
+        // equalizer adapts its filters to it rather than resampling.
+        mEqualizer = new AudioEqualizer(mEngine.getSampleRate());
         mMatchingVoice = null;
         List<Voice> voices = mEngine.getAvailableVoices();
         synchronized (mAvailableVoices) {
@@ -452,7 +457,13 @@ public class TtsService extends TextToSpeechService {
         mCallback = callback;
         mCallback.start(mEngine.getSampleRate(), mEngine.getAudioFormat(), mEngine.getChannelCount());
 
-        final VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), mEngine);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        if (mEqualizer != null) {
+            mEqualizer.applyPreferences(prefs);
+            mEqualizer.reset();
+        }
+
+        final VoiceSettings settings = new VoiceSettings(prefs, mEngine);
         mEngine.setVoice(voice, settings.getVoiceVariant());
 
         int rate = settings.getRate();
@@ -500,6 +511,11 @@ public class TtsService extends TextToSpeechService {
             if ((audioData == null) || (audioData.length == 0)) {
                 onSynthDataComplete();
                 return;
+            }
+
+            if (mEqualizer != null) {
+                // In-place; a no-op when the preset is "Off".
+                mEqualizer.process(audioData);
             }
 
             final int maxBytesToCopy = mCallback.getMaxBufferSize();
